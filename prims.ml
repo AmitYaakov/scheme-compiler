@@ -21,12 +21,12 @@ module Prims : PRIMS = struct
   let make_routine label body =
     label ^ ":
        push rbp
-       mov rbp, rsp 
+       mov rbp, rsp
        " ^ body ^ "
          pop rbp
          ret";;
 
-  (* Many of the low-level stdlib procedures are predicate procedures, which perform 
+  (* Many of the low-level stdlib procedures are predicate procedures, which perform
      some kind of comparison, and then return one of the constants sob_true or sob_false.
      Since this pattern repeats so often, we have a template that takes a body, and a type
      of condition to test for jump, and generates an assembly snippet that evaluated the body,
@@ -40,14 +40,14 @@ module Prims : PRIMS = struct
        mov rax, SOB_TRUE_ADDRESS
        .return:";;
 
-  (* 
-     Many of the predicates just test some kind of equality (or, equivalently, if the 
-     zero flag is set), so this is an auxiliary function dedicated to equality-testing predicates. 
+  (*
+     Many of the predicates just test some kind of equality (or, equivalently, if the
+     zero flag is set), so this is an auxiliary function dedicated to equality-testing predicates.
      Note how we make use of currying here.
    *)
   let return_boolean_eq = return_boolean "je";;
-  
-  (* 
+
+  (*
      Almost all of the stdlib function take 1 or more arguments. Since all of the variadic procedures
      are implemented in the high-level scheme library code (found in stdlib.scm), we only have to deal
      with 1,2 or 3 arguments.
@@ -57,7 +57,7 @@ module Prims : PRIMS = struct
      kind of consistency, so why not just use the standard ABI.
      See page 22 in https://raw.githubusercontent.com/wiki/hjl-tools/x86-psABI/x86-64-psABI-1.0.pdf
 
-     *** FIXME: There's a typo here: PVAR(0) should be rdi, PVAR(1) should be rsi, according to the ABI     
+     *** FIXME: There's a typo here: PVAR(0) should be rdi, PVAR(1) should be rsi, according to the ABI
    *)
   let make_unary label body = make_routine label ("mov rsi, PVAR(0)\n\t" ^ body);;
   let make_binary label body = make_unary label ("mov rdi, PVAR(1)\n\t" ^ body);;
@@ -65,14 +65,14 @@ module Prims : PRIMS = struct
 
   (* All of the type queries in scheme (e.g., null?, pair?, char?, etc.) are equality predicates
      that are implemented by comparing the first byte pointed to by PVAR(0) to the relevant type tag.
-     so the only unique bits of each of these predicates are the name of the routine (i.e., the label), 
+     so the only unique bits of each of these predicates are the name of the routine (i.e., the label),
      and the type tag we expect to find.
      The implementation of the type-queries generator is slightly more complex, since a template and a label
-     name aren't enough: we need to generate a routine for every (label * type_tag) pair (e.g., the routine 
+     name aren't enough: we need to generate a routine for every (label * type_tag) pair (e.g., the routine
      `is_boolean` should test for the T_BOOL type tag).
-     We have a list of pairs, associating each predicate label with the correct type tag, and map the templating 
-     function over this list. Note that the query template function makes use of some of the other templating 
-     functions defined above: `make_unary` (predicates take only one argument) and `return_boolean_eq` (since 
+     We have a list of pairs, associating each predicate label with the correct type tag, and map the templating
+     function over this list. Note that the query template function makes use of some of the other templating
+     functions defined above: `make_unary` (predicates take only one argument) and `return_boolean_eq` (since
      these are equality-testing predicates).
    *)
   let type_queries =
@@ -88,12 +88,12 @@ module Prims : PRIMS = struct
 
   (* The rational number artihmetic operators have to normalize the fractions they return,
      so a GCD implementation is needed. Now there are two options: 
-     1) implement only a scheme-procedure-like GCD, and allocate rational number scheme objects for the 
+     1) implement only a scheme-procedure-like GCD, and allocate rational number scheme objects for the
         intermediate numerator and denominator values of the fraction to be returned, call GCD, decompose
         the returned fraction, perform the divisions, and allocate the final fraction to return
-     2) implement 2 GCDs: a low-level gcd that only implements the basic GCD loop, which is used by the rational 
+     2) implement 2 GCDs: a low-level gcd that only implements the basic GCD loop, which is used by the rational
         number arithmetic operations; and a scheme-procedure-like GCD to be wrapped by the stdlib GCD implementation.
-    
+
      The second option is more efficient, and doesn't cost much, in terms of executable file bloat: there are only 4
      routines that inline the primitive gcd_loop: add, mul, div, and gcd.
      Note that div the inline_gcd embedded in div is dead code (the instructions are never executed), so a more optimized
@@ -111,16 +111,16 @@ module Prims : PRIMS = struct
      .end_gcd_loop:";;
 
   (* The arithmetic operation implementation is multi-tiered:
-     - The low-level implementations of all operations are binary, e.g. (+ 1 2 3) and (+ 1) are not 
+     - The low-level implementations of all operations are binary, e.g. (+ 1 2 3) and (+ 1) are not
        supported in the low-level implementation.
      - The low-level implementations only support same-type operations, e.g. (+ 1 2.5) is not supported
        in the low-level implementation. This means each operation has two low-level implementations, one
        for floating-point operands, and one for fractional operands.
-     - Each pair of low-level operation implementations is wrapped by a dispatcher which decides which 
+     - Each pair of low-level operation implementations is wrapped by a dispatcher which decides which
        of the two implementations to call (by probing the types of the operands).
      - The high-level implementations (see stdlib.scm) make use of a high-level dispatcher, that is in charge
        of performing type conversions as necessary to satisfy the pre-conditions of the low-level implementations.
-     
+
      Operations on floating-point operands:
      -------------------------------------
      The implementations of binary floating point arithmetic operations contain almost identical code. The
@@ -135,7 +135,7 @@ module Prims : PRIMS = struct
      ----------------------------------
      The addition and multiplication operations on rational numbers are similar to each other: both load 2 arguments,
      both deconstruct the arguments into numerator and denominator, both allocate a sob_rational to store the result
-     on the heap, and both move the address of this sob_rational into rax as the return value. The only differences 
+     on the heap, and both move the address of this sob_rational into rax as the return value. The only differences
      are the routine name (label), and the implementation of the arithmetic operation itself.
      This allows us to easily abstract this code into a template that requires a label name and its matching
      arithmetic instruction (which are paired up in the op_map).
@@ -158,7 +158,7 @@ module Prims : PRIMS = struct
        more information).
    *)
   let numeric_ops =
-    let numeric_op name flt_body rat_body body_wrapper =      
+    let numeric_op name flt_body rat_body body_wrapper =
       make_binary name
         (body_wrapper
            ("mov dl, byte [rsi]
@@ -168,7 +168,7 @@ module Prims : PRIMS = struct
              jmp .op_return
           ." ^ name ^ "_rat:
              " ^ rat_body ^ "
-          .op_return:")) in      
+          .op_return:")) in
     let arith_map = [
         "MAKE_RATIONAL(rax, rdx, rdi)
          mov PVAR(1), rax
@@ -177,7 +177,7 @@ module Prims : PRIMS = struct
         
         "imul rsi, rdi
 	 imul rcx, rdx", "mulsd", "mul";
-        
+
         "imul rsi, rdx
 	 imul rdi, rcx
 	 add rsi, rdi
@@ -262,25 +262,25 @@ module Prims : PRIMS = struct
         (* string ops *)
         "STRING_LENGTH rsi, rsi
          MAKE_RATIONAL(rax, rsi, 1)", make_unary, "string_length";
-        
+
         "STRING_ELEMENTS rsi, rsi
          NUMERATOR rdi, rdi
          add rsi, rdi
          mov sil, byte [rsi]
          MAKE_CHAR(rax, sil)", make_binary, "string_ref";
-        
+
         "STRING_ELEMENTS rsi, rsi
          NUMERATOR rdi, rdi
          add rsi, rdi
          CHAR_VAL rax, rdx
          mov byte [rsi], al
          mov rax, SOB_VOID_ADDRESS", make_tertiary, "string_set";
-        
+
         "NUMERATOR rsi, rsi
          CHAR_VAL rdi, rdi
          and rdi, 255
          MAKE_STRING rax, rsi, dil", make_binary, "make_string";
-        
+
         "SYMBOL_VAL rsi, rsi
 	 STRING_LENGTH rcx, rsi
 	 STRING_ELEMENTS rdi, rsi
@@ -295,7 +295,7 @@ module Prims : PRIMS = struct
 	 push SOB_NIL_ADDRESS
 	 call make_string
 	 add rsp, 4*8
-	 STRING_ELEMENTS rsi, rax   
+	 STRING_ELEMENTS rsi, rax
 	 pop rdi
 	 pop rcx
 	 cmp rcx, 0
@@ -346,12 +346,168 @@ module Prims : PRIMS = struct
          jge .make_result
          neg rdx
          .make_result:
-         MAKE_RATIONAL(rax, rdx, 1)", make_binary, "gcd";  
+         MAKE_RATIONAL(rax, rdx, 1)", make_binary, "gcd";
       ] in
     String.concat "\n\n" (List.map (fun (a, b, c) -> (b c a)) misc_parts);;
+    let car =
+      "car:
+        push rbp
+        mov rbp, rsp
+        mov rsi, PVAR(0) ; get the first param = list
+        CAR rax, rsi
+        leave
+        ret";;
 
+      let cdr =
+      "cdr:
+        push rbp
+        mov rbp, rsp
+        mov rsi, PVAR(0) ; get the first param = list
+        CDR rax, rsi
+        leave
+        ret";;
+
+      let cons =
+      "cons:
+        push rbp
+        mov rbp, rsp
+        mov rsi, PVAR(0) ; get the first param = left element
+        mov rdi, PVAR(1) ; get the second param = right element
+        MAKE_PAIR(rax, rsi, rdi)
+        leave
+        ret
+        ";;
+
+      let set_car = "
+       set_car:
+        push rbp
+        mov rbp, rsp
+        mov rsi, PVAR(0) ; get the first param = list
+        mov rdi, PVAR(1) ; get the second param = set value
+        add rsi, TYPE_SIZE
+        lea rcx, [rsi]
+        mov qword[rcx], rdi
+        mov rax, SOB_VOID_ADDRESS ; set function returns void
+        leave
+        ret";;
+
+      let set_cdr = "
+        set_cdr:
+          push rbp
+          mov rbp, rsp
+          mov rsi, PVAR(0) ; get the first param = list
+          mov rdi, PVAR(1) ; get the second param = set value
+          add rsi, TYPE_SIZE
+          add rsi , WORD_SIZE
+          lea rcx, [rsi]
+          mov qword[rcx], rdi
+          mov rax, SOB_VOID_ADDRESS ; set function returns void
+          leave
+          ret" ;;
+
+    let apply = "
+    apply:
+    push rbp
+    mov rbp,rsp
+
+    ;; check if last param, is empty list
+    mov rax, qword [rbp + 8 * 3] ;; rax == param count
+    mov rbx, qword [rbp + 8 * (3 + rax)] ;; rbx == last param (list)
+    mov r9 , rbx ;; save last param (list)
+    mov r10, 0 ; counter
+    cmp rbx, SOB_NIL_ADDRESS
+    je push_rest_params
+
+    push 0xffffffffffffffff ; push magic
+
+    ;; calculate list length and push the list params
+    calc_list_length_and_push:
+      cmp rbx, SOB_NIL_ADDRESS
+      je end_calc_list_length_and_push
+      inc r10
+      CAR rsi, rbx
+      push rsi
+      CDR rbx, rbx
+      jmp calc_list_length_and_push
+
+    end_calc_list_length_and_push:
+
+    ;; reverse the list in the stack
+    mov r15,r10
+    mov rsi, r10 ; list length
+    shr rsi, 1 ; rsi = list length / 2 (loop counter)
+    mov rdi, 0 ; counter
+    dec r10
+    reverse_list:
+          cmp rdi, rsi
+          je end_reverse_list
+          mov r13, qword[rsp + 8 * rdi] ; save top
+          mov r14, qword [rsp + 8 * r10] ; save bottom
+          mov qword[rsp + 8 * rdi], r14
+          mov qword [rsp + 8 * r10], r13
+          dec r10
+          inc rdi
+          jmp reverse_list
+    end_reverse_list:
+    mov r10,r15 ; length of the list
+
+    ;; push the first params
+    push_rest_params:
+    sub rax, 2 ; remove the proc and the list
+    mov rdi , rax
+    push_rest_params_loop:
+          cmp rdi,0
+          je end_push_rest_params_loop
+          push qword [rbp+8*(4 + rdi)]
+          dec rdi
+          jmp push_rest_params_loop
+    end_push_rest_params_loop:
+
+    ;; update the params count
+    add rax, r10 ; add the number of params in the list
+    push rax ; push the number of params updated for the closure later
+
+    ; push the lexical and the ret
+    mov r12, qword[rbp + 8*4] ; the proc (var in first place)
+    CLOSURE_ENV r13, r12
+    push r13 ; push the env
+    push qword[rbp + 8*1]  ; save the old ret address
+    mov r8, [rbp]
+    CLOSURE_CODE r12, r12
+    ;; update the stack with the values
+    add rax, 5 ; add to the param count - magic, ret, lexical, n
+    mov r15, rax
+    push rax
+    mov rax, qword[rbp + 8*3]
+    add rax, 5
+    mov rsi, rax
+    mov rcx, r15
+    mov rdx, 0
+    mov rdi,1
+    shift_loop:
+    cmp rdx, rcx
+    je end_shift_loop
+          dec rax
+          neg rdi
+          push qword [rbp+WORD_SIZE*rdi]
+          pop qword[rbp+WORD_SIZE*rax]
+          neg rdi
+          inc rdx
+          inc rdi
+          jmp shift_loop
+    end_shift_loop:
+    pop rax
+    sub r15, rsi ; (new - old)
+    sub rcx, r15
+    shl rcx, 3
+    add rsp, rcx
+
+    mov rbp,r8
+    jmp r12
+    leave
+    ret";;
   (* This is the interface of the module. It constructs a large x86 64-bit string using the routines
      defined above. The main compiler pipline code (in compiler.ml) calls into this module to get the
      string of primitive procedures. *)
-  let procs = String.concat "\n\n" [type_queries ; numeric_ops; misc_ops];;
+  let procs = String.concat "\n\n" [type_queries ; numeric_ops; misc_ops; car; cdr; cons; set_car; set_cdr;apply];;
 end;;

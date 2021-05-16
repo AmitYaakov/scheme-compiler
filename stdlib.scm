@@ -19,20 +19,41 @@
       (map-many f args)))))
 
 
-(define fold-left 
-  #;(Add your implementation here
-     Note: The file won't compile like this, beacuase your tag-parser requires define to have a second expression.
-     This is on purpose, so you don't compile the library without completing this implementation by mistake.))
+;works
+(define fold-left
+	(let ((null? null?) (car car) (cdr cdr))
+	(lambda (func acc lst)
+		(if (null? lst)
+		acc
+		(fold-left func
+				(func acc (car lst))
+				(cdr lst))))))
 
+;works
 (define fold-right
-  #;(Add your implementation here
-     Note: The file won't compile like this, beacuase your tag-parser requires define to have a second expression.
-     This is on purpose, so you don't compile the library without completing this implementation by mistake.))
+	(let ((null? null?) (car car) (cdr cdr))
+	(lambda (func acc lst)
+		(if (null? lst)
+            acc
+			(func (car lst) (fold-right func acc (cdr lst)))))))
 
+;works
+(define reverse
+	(lambda (lst)
+		(if (null? lst) '()
+			(append (reverse (cdr lst)) (list (car lst))))))
+
+;works
 (define cons*
-  #;(Add your implementation here
-     Note: The file won't compile like this, beacuase your tag-parser requires define to have a second expression.
-     This is on purpose, so you don't compile the library without completing this implementation by mistake.))
+ (let ((null? null?) (cons cons) (car car) (cdr cdr))
+   (lambda x
+     (cond
+    ((null? x) '())
+    (( = (length x) 1) (car x))
+    (else (fold-right cons
+                    (car (reverse x))
+                    (reverse (cdr (reverse x)))))))))
+
 
 (define append
   (let ((null? null?)
@@ -48,7 +69,7 @@
 
 (define list (lambda x x))
 
-(define list? 
+(define list?
   (let ((null? null?)
 	(pair? pair?)
 	(cdr cdr))
@@ -135,7 +156,7 @@
 	    0
 	    (gcd-loop (car x) (cdr x)))))))
 
-(define zero? 
+(define zero?
   (let ((= =))
     (lambda (x) (= x 0))))
 

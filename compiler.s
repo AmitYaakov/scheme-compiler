@@ -123,6 +123,41 @@
         dq %3
 %endmacro
 
+
+%macro SHIFT_FRAME 1 ; %1 = size of frame (constant)
+	push rax
+	mov rax, qword[rbp + 8 * 3]
+	add rax, 5
+	mov rcx,rax
+	%assign i 1
+	%rep %1
+		dec rax
+		push qword[rbp-WORD_SIZE*i]
+		pop qword[rbp+WORD_SIZE*rax]
+		%assign i i+1
+	%endrep
+	pop rax
+	shl rcx, 3
+	add rsp, rcx
+ %endmacro
+
+%macro SHIFT_STACK_ONE 1 ; %1 = size of frame (constant)
+	   mov rcx, 0 ; loop counter
+	   mov r15, %1
+       %%shift_loop:
+       cmp rcx, r15
+       je %%end_shift_loop
+       push qword[rbp+8*rcx]
+       pop qword[rbp+WORD_SIZE*rcx-8]
+       inc rcx
+	   jmp %%shift_loop
+       %%end_shift_loop:
+       sub rsp, 8
+       sub rbp, 8
+ %endmacro
+
+
+
 %define MAKE_RATIONAL(r, num, den) \
 	MAKE_TWO_WORDS r, T_RATIONAL, num, den
 
@@ -138,7 +173,29 @@
 %define MAKE_CLOSURE(r, env, body) \
         MAKE_TWO_WORDS r, T_CLOSURE, env, body
 
-	
+
+%macro MAKE_LITERAL 2
+	db %1
+	%2
+%endmacro
+
+%macro MAKE_LITERAL_STRING 1
+	db T_STRING
+	dq (%%end_str - %%str)
+%%str:
+	db %1
+%%end_str:
+%endmacro
+
+
+%define MAKE_BOOL(val) MAKE_LITERAL T_BOOL, val
+%define MAKE_NIL db T_NIL
+%define MAKE_VOID db T_VOID
+%define MAKE_LITERAL_SYMBOL(val) MAKE_LITERAL T_SYMBOL, dq val
+%define MAKE_LITERAL_CHAR(val) MAKE_LITERAL T_CHAR, db val
+%define MAKE_LITERAL_FLOAT(val) MAKE_LITERAL T_FLOAT, dq val
+
+
 ;;; Macros and routines for printing Scheme OBjects to STDOUT
 %define CHAR_NUL 0
 %define CHAR_TAB 9
